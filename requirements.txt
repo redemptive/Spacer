@@ -4,7 +4,7 @@ cryptography==2.6.1
 dbus-python==1.2.12
 entrypoints==0.3
 enum34==1.1.6
-gyp==0.1
+gyp>=0.1
 ipaddress==1.0.17
 keyring==18.0.1
 keyrings.alt==3.1.1
