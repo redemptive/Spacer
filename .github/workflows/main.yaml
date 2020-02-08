@@ -1,0 +1,40 @@
+name: Merge to master
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.5, 3.6, 3.7, 3.8]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Git config
+      run: |
+        git config --local user.email "ewan_forbes@yahoo.co.uk"
+        git config --local user.name "redemptive"
+        git remote set-url origin https://${{secrets.GITHUB_TOKEN}}@github.com/redemptive/Spacer.git
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    - name: Install unittest
+      run: |
+        pip install unittest
+    - name: Test with unittest
+      run: |
+        pip test.py
+    - name: Merge with master and push
+      run: | 
+        git merge master
+        git push origin master
