@@ -31,8 +31,7 @@ jobs:
     - name: Test with unittest
       run: |
         python test.py
-    - name: Merge with master and push
-      run: | 
-        git checkout origin master
-        git merge dev
-        git push origin master
+    - name: Merge branch
+      uses: devmasx/merge-branch@v1.1.0
+      with:
+        target_branch: master
