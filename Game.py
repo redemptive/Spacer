@@ -1,22 +1,39 @@
 import pygame
 
-from GameObject import GameObject
-
 class Game():
     def __init__(self):
         self.title:str = "Spacer"
-        self.width:int = 500
-        self.height:int = 500
+        self.window_width:int = 1500
+        self.window_height:int = 1000
+        self.map_height:int = 10000
+        self.map_width:int = 10000
         self.running:bool = True
         self.fps:int = 60
+        self.keyboard:dict = {
+            "up": False,
+            "down": False,
+            "left": False,
+            "right": False
+        }
 
         pygame.init()
         pygame.display.set_caption(self.title)
 
         self.clock = pygame.time.Clock()
-        self.display = pygame.display.set_mode((self.width, self.height))
+        self.display = pygame.display.set_mode((self.window_width, self.window_height))
 
-        self.player = GameObject.GameObject(0,0,100,100)
+        self.player:GameObject = GameObject(0,0,100,100)
+
+        # Initialise GameObjects
+        self.game_objects:list = [
+            # Planets
+            Planet(10, 10, 20),
+            Planet(2000, 2000, 100),
+            # Some stars
+            Circle(100, 100, 2, (255, 255, 255))
+        ]
+
+        self.player = Player(400, 400, 50, 50)
 
         self.loop()
     
@@ -24,7 +41,30 @@ class Game():
         
         # main loop
         while self.running:
-            self.check_events()        
+            self.check_events()
+
+            self.display.fill((0, 0, 0))
+
+            if self.player.x - (self.window_width / 2) < 0:
+                camera_left = 0
+            elif self.player.x + (self.window_width / 2) > self.map_width:
+                camera_left = self.map_width - self.window_width
+            else:
+                camera_left = self.player.x - (self.window_width / 2)
+
+            if self.player.y - (self.window_height / 2) < 0:
+                camera_top = 0
+            elif self.player.y + (self.window_height / 2) > self.map_height:
+                camera_top = self.map_height - self.window_height
+            else:
+                camera_top = self.player.y - (self.window_height / 2)
+
+            for game_object in self.game_objects:
+                game_object.draw(self.display, camera_left, camera_top)
+
+            self.player.update(self.keyboard)
+            self.player.draw(self.display, camera_left, camera_top)
+
             pygame.display.update()
             self.clock.tick(self.fps)
         
@@ -36,6 +76,63 @@ class Game():
             if event.type == pygame.QUIT:
                 self.running = False
 
+            if event.type == pygame.KEYDOWN:
+                self.update_keyboard(event.key, True)
+            
+            if event.type == pygame.KEYUP:
+                self.update_keyboard(event.key, False)
+
+    def update_keyboard(self, key, active:bool):
+        if key == pygame.K_UP:
+            self.keyboard["up"] = active
+        elif key == pygame.K_DOWN:
+            self.keyboard["down"] = active
+        elif key == pygame.K_RIGHT:
+            self.keyboard["right"] = active
+        elif key == pygame.K_LEFT:
+            self.keyboard["left"] = active
+
+class GameObject():
+    def __init__(self, x:int, y:int, width:int, height:int):
+        self.x:int = x
+        self.y:int = y
+        self.width:int = width
+        self.height:int = height
+
+    def move(self, dX:int, dY:int):
+        self.x = self.x + dX
+        self.y = self.y + dY
+
+class Player(GameObject):
+    def __init__(self, x:int, y:int, width:int, height:int):
+        GameObject.__init__(self, x, y, width, height)
+        self.speed:int = 3
+
+    def update(self, keyboard:dict):
+        if keyboard["up"] == True:
+            self.move(0, -(self.speed))
+        if keyboard["down"] == True:
+            self.move(0, self.speed)
+        if keyboard["right"] == True:
+            self.move(self.speed, 0)
+        if keyboard["left"] == True:
+            self.move(-(self.speed), 0)
+
+    def draw(self, display, camera_left:int, camera_top:int):
+        pygame.draw.rect(display, (255, 255, 255), pygame.Rect(int(self.x - camera_left), int(self.y - camera_top), self.width, self.height))
+
+class Circle(GameObject):
+    def __init__(self, x:int, y:int, diameter:int, colour):
+        GameObject.__init__(self, x, y, diameter, diameter)
+        self.colour = colour
+    
+    def draw(self, display, camera_left:int, camera_top:int):
+        pygame.draw.circle(display, self.colour, (int(self.x - camera_left), int(self.y - camera_top)), int(self.height / 2), 0)
+
+class Planet(Circle):
+    def __init__(self, x:int, y:int, diameter:int):
+        Circle.__init__(self, x, y, diameter, (0, 0, 255))
+        
      
 if __name__=="__main__":
     game = Game()
