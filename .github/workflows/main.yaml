@@ -33,5 +33,6 @@ jobs:
         python test.py
     - name: Merge with master and push
       run: | 
-        git merge master
+        git checkout master
+        git merge dev
         git push origin master
