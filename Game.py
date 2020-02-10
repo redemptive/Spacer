@@ -1,4 +1,5 @@
 import pygame
+import random
 
 class Game():
     def __init__(self):
@@ -15,6 +16,12 @@ class Game():
             "left": False,
             "right": False
         }
+        self.colours:dict = {
+            "black": (0, 0, 0),
+            "white": (255, 255, 255),
+            "blue": (0, 0, 255),
+            "grey": (100, 100, 100)
+        }
 
         pygame.init()
         pygame.display.set_caption(self.title)
@@ -22,16 +29,18 @@ class Game():
         self.clock = pygame.time.Clock()
         self.display = pygame.display.set_mode((self.window_width, self.window_height))
 
-        self.player:GameObject = GameObject(0,0,100,100)
+        self.player:GameObject = GameObject(0, 0, 100, 100)
 
         # Initialise GameObjects
-        self.game_objects:list = [
-            # Planets
-            Planet(10, 10, 20),
-            Planet(2000, 2000, 100),
-            # Some stars
-            Circle(100, 100, 2, (255, 255, 255))
-        ]
+        self.game_objects:list = []
+
+        # Create some stars
+        for i in range(0, 200):
+            self.game_objects.append(Circle(random.randint(0, self.map_width), random.randint(0, self.map_height), 2, self.colours["white"]))
+
+
+        self.game_objects.append(Planet(100, 1000, 2000, self.colours["blue"]))
+        self.game_objects.append(Planet(2000, 2000, 100, self.colours["grey"]))
 
         self.player = Player(400, 400, 50, 50)
 
@@ -106,17 +115,37 @@ class GameObject():
 class Player(GameObject):
     def __init__(self, x:int, y:int, width:int, height:int):
         GameObject.__init__(self, x, y, width, height)
-        self.speed:int = 3
+        self.max_velocity:int = 10
+        self.x_velocity:float = 0
+        self.y_velocity:float = 0
 
     def update(self, keyboard:dict):
-        if keyboard["up"] == True:
-            self.move(0, -(self.speed))
-        if keyboard["down"] == True:
-            self.move(0, self.speed)
-        if keyboard["right"] == True:
-            self.move(self.speed, 0)
-        if keyboard["left"] == True:
-            self.move(-(self.speed), 0)
+        if (keyboard["up"] == True) and (self.y_velocity > -(self.max_velocity)):
+            self.y_velocity = self.y_velocity - 0.1
+        if (keyboard["up"] == False) and (self.y_velocity < 0):
+            self.y_velocity = self.y_velocity + 0.1
+
+        if (keyboard["down"] == True) and (self.y_velocity < self.max_velocity):
+            self.y_velocity = self.y_velocity + 0.1
+        if (keyboard["down"] == False) and (self.y_velocity > 0):
+            self.y_velocity = self.y_velocity - 0.1
+
+        if (keyboard["right"] == True) and (self.x_velocity < self.max_velocity):
+            self.x_velocity = self.x_velocity + 0.1
+        if (keyboard["right"] == False) and (self.x_velocity > 0):
+            self.x_velocity = self.x_velocity - 0.1
+
+        if (keyboard["left"] == True) and (self.x_velocity > -(self.max_velocity)):
+            self.x_velocity = self.x_velocity - 0.1
+        if (keyboard["left"] == False) and (self.x_velocity < 0):
+            self.x_velocity = self.x_velocity + 0.1
+        
+        if (self.x_velocity > 0) and (self.x_velocity < 0.1):
+            self.x_velocity = 0
+
+        self.move(self.x_velocity, self.y_velocity)
+
+        print(self.x_velocity)
 
     def draw(self, display, camera_left:int, camera_top:int):
         pygame.draw.rect(display, (255, 255, 255), pygame.Rect(int(self.x - camera_left), int(self.y - camera_top), self.width, self.height))
@@ -130,8 +159,8 @@ class Circle(GameObject):
         pygame.draw.circle(display, self.colour, (int(self.x - camera_left), int(self.y - camera_top)), int(self.height / 2), 0)
 
 class Planet(Circle):
-    def __init__(self, x:int, y:int, diameter:int):
-        Circle.__init__(self, x, y, diameter, (0, 0, 255))
+    def __init__(self, x:int, y:int, diameter:int, colour):
+        Circle.__init__(self, x, y, diameter, colour)
         
      
 if __name__=="__main__":
