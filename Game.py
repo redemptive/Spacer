@@ -1,5 +1,6 @@
 import pygame
 import random
+import math
 
 class Game():
     def __init__(self):
@@ -112,43 +113,55 @@ class GameObject():
         self.x = self.x + dX
         self.y = self.y + dY
 
-class Player(GameObject):
-    def __init__(self, x:int, y:int, width:int, height:int):
+class SpriteObject(GameObject):
+    def __init__(self, x:int, y:int, width:int, height:int, sprite_path:str):
         GameObject.__init__(self, x, y, width, height)
-        self.max_velocity:int = 10
-        self.x_velocity:float = 0
+        self.sprite = pygame.transform.scale(pygame.image.load(sprite_path), (width, height))
+        self.orientation:int = 0
+
+    def change_orientation(self, d_degrees):
+        if (self.orientation + d_degrees > 360):
+            self.orientation = (self.orientation + 360) + d_degrees
+        if (self.orientation + d_degrees < 0):
+            self.orientation = (self.orientation - 360) + d_degrees
+        else:
+            self.orientation = self.orientation + d_degrees
+
+    def draw(self, display, camera_left:int, camera_top:int):
+        rotated_sprite = pygame.transform.rotate(self.sprite, self.orientation)
+        display.blit(rotated_sprite, (int(self.x - camera_left), int(self.y - camera_top)))
+
+class Player(SpriteObject):
+    def __init__(self, x:int, y:int, width:int, height:int):
+        SpriteObject.__init__(self, x, y, width, height, "assets/player.png")
+        self.max_forward_velocity:int = 20
+        self.max_backward_velocity:int = 5
+        self.orientation_velocity:float = 0
+        self.max_orientation_velocity:float = 5
         self.y_velocity:float = 0
 
     def update(self, keyboard:dict):
-        if (keyboard["up"] == True) and (self.y_velocity > -(self.max_velocity)):
-            self.y_velocity = self.y_velocity - 0.1
-        if (keyboard["up"] == False) and (self.y_velocity < 0):
-            self.y_velocity = self.y_velocity + 0.1
-
-        if (keyboard["down"] == True) and (self.y_velocity < self.max_velocity):
-            self.y_velocity = self.y_velocity + 0.1
-        if (keyboard["down"] == False) and (self.y_velocity > 0):
+        if (keyboard["down"] == True) and (self.y_velocity > -(self.max_backward_velocity)):
             self.y_velocity = self.y_velocity - 0.1
 
-        if (keyboard["right"] == True) and (self.x_velocity < self.max_velocity):
-            self.x_velocity = self.x_velocity + 0.1
-        if (keyboard["right"] == False) and (self.x_velocity > 0):
-            self.x_velocity = self.x_velocity - 0.1
+        if (keyboard["up"] == True) and (self.y_velocity < self.max_forward_velocity):
+            self.y_velocity = self.y_velocity + 0.1
 
-        if (keyboard["left"] == True) and (self.x_velocity > -(self.max_velocity)):
-            self.x_velocity = self.x_velocity - 0.1
-        if (keyboard["left"] == False) and (self.x_velocity < 0):
-            self.x_velocity = self.x_velocity + 0.1
+        if (keyboard["right"] == True) and (self.orientation_velocity < self.max_orientation_velocity):
+            self.orientation_velocity += 0.05
+
+        if (keyboard["left"] == True) and (self.orientation_velocity > -(self.max_orientation_velocity)):
+            self.orientation_velocity -= 0.05
         
-        if (self.x_velocity > 0) and (self.x_velocity < 0.1):
-            self.x_velocity = 0
+        if (self.orientation_velocity > 0) and (self.orientation_velocity < 0.05):
+            self.orientation_velocity = 0
 
-        self.move(self.x_velocity, self.y_velocity)
+        self.change_orientation(-self.orientation_velocity)
+        self.move_at_orientation()
 
-        print(self.x_velocity)
+    def move_at_orientation(self):
+        self.move(-(self.y_velocity*math.cos(math.radians(self.orientation))), (self.y_velocity*math.sin(math.radians(self.orientation))))
 
-    def draw(self, display, camera_left:int, camera_top:int):
-        pygame.draw.rect(display, (255, 255, 255), pygame.Rect(int(self.x - camera_left), int(self.y - camera_top), self.width, self.height))
 
 class Circle(GameObject):
     def __init__(self, x:int, y:int, diameter:int, colour):
