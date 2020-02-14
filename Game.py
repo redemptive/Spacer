@@ -37,8 +37,7 @@ class Game():
 
         # Create some stars
         for i in range(0, 200):
-            self.game_objects.append(Circle(random.randint(0, self.map_width), random.randint(0, self.map_height), 2, self.colours["white"]))
-
+            self.game_objects.append(BackgroundStar(random.randint(0, self.map_width), random.randint(0, self.map_height), 4, self.colours["white"]))
 
         self.game_objects.append(Planet(100, 1000, 2000, self.colours["blue"]))
         self.game_objects.append(Planet(2000, 2000, 100, self.colours["grey"]))
@@ -114,9 +113,14 @@ class GameObject():
         self.y = self.y + dY
 
 class SpriteObject(GameObject):
-    def __init__(self, x:int, y:int, width:int, height:int, sprite_path:str):
+    def __init__(self, x:int, y:int, width:int, height:int, sprite_paths:list):
         GameObject.__init__(self, x, y, width, height)
-        self.sprite = pygame.transform.scale(pygame.image.load(sprite_path), (width, height))
+        self.sprites:dict = {}
+
+        for sprite in sprite_paths:
+            print(sprite)
+            self.sprites[sprite] = pygame.transform.scale(pygame.image.load(sprite_paths[sprite]), (width, height))
+        
         self.orientation:int = 0
 
     def change_orientation(self, d_degrees):
@@ -127,18 +131,26 @@ class SpriteObject(GameObject):
         else:
             self.orientation = self.orientation + d_degrees
 
-    def draw(self, display, camera_left:int, camera_top:int):
-        rotated_sprite = pygame.transform.rotate(self.sprite, self.orientation)
+    def draw(self, display, camera_left:int, camera_top:int, sprite:str = ""):
+        if sprite == "":
+            sprite = next(iter(self.sprites))
+        rotated_sprite = pygame.transform.rotate(self.sprites[sprite], self.orientation)
         display.blit(rotated_sprite, (int(self.x - camera_left), int(self.y - camera_top)))
 
 class Player(SpriteObject):
     def __init__(self, x:int, y:int, width:int, height:int):
-        SpriteObject.__init__(self, x, y, width, height, "assets/player.png")
+        SpriteObject.__init__(self, x, y, width, height, 
+            {
+                "player": "assets/player.png",
+                "forward": "assets/forward_player.png"
+            }
+        )
         self.max_forward_velocity:int = 20
         self.max_backward_velocity:int = 5
         self.orientation_velocity:float = 0
-        self.max_orientation_velocity:float = 5
+        self.max_orientation_velocity:float = 2
         self.y_velocity:float = 0
+        self.current_sprite:str = "player"
 
     def update(self, keyboard:dict):
         if (keyboard["down"] == True) and (self.y_velocity > -(self.max_backward_velocity)):
@@ -146,6 +158,12 @@ class Player(SpriteObject):
 
         if (keyboard["up"] == True) and (self.y_velocity < self.max_forward_velocity):
             self.y_velocity = self.y_velocity + 0.1
+            self.current_sprite = "forward"
+        elif keyboard["up"] == False:
+            self.current_sprite = "player"
+        
+        if keyboard["up"] == True:
+            self.current_sprite = "forward"
 
         if (keyboard["right"] == True) and (self.orientation_velocity < self.max_orientation_velocity):
             self.orientation_velocity += 0.05
@@ -161,6 +179,9 @@ class Player(SpriteObject):
 
     def move_at_orientation(self):
         self.move(-(self.y_velocity*math.cos(math.radians(self.orientation))), (self.y_velocity*math.sin(math.radians(self.orientation))))
+    
+    def draw(self, display, camera_left:int, camera_top:int, sprite:str = ""):
+        super().draw(display, camera_left, camera_top, self.current_sprite)
 
 
 class Circle(GameObject):
@@ -175,6 +196,38 @@ class Planet(Circle):
     def __init__(self, x:int, y:int, diameter:int, colour):
         Circle.__init__(self, x, y, diameter, colour)
         
+class BackgroundStar(Circle):
+    def __init__(self, x:int, y:int, diameter:int, colour):
+        Circle.__init__(self, x, y, diameter, colour)
+        self.max_ticks:int = 100
+        self.ticks:int = random.randint(0, self.max_ticks)
+        self.d_luminosity:int = 2
+        self.positive_twinkle:bool = True
+    
+    def draw(self, display, camera_left:int, camera_top:int):
+
+        # This makes the background stars slightly fade in and out
+        # It looks like they are twinkling
+        if self.ticks > self.max_ticks:
+            self.ticks = 0
+            self.positive_twinkle = not self.positive_twinkle
+        else:
+            self.ticks += 1
+
+        colour_list = list(self.colour)
+
+        if self.positive_twinkle and (colour_list[0] < 255):
+            colour_list[0] += self.d_luminosity
+            colour_list[1] += self.d_luminosity
+            colour_list[2] += self.d_luminosity
+        elif colour_list[0] > 1:
+            colour_list[0] -= self.d_luminosity
+            colour_list[1] -= self.d_luminosity
+            colour_list[2] -= self.d_luminosity
+
+        self.colour = tuple(colour_list)
+
+        super().draw(display, camera_left, camera_top)
      
 if __name__=="__main__":
     game = Game()
