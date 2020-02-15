@@ -2,6 +2,13 @@ import pygame
 import random
 import math
 
+from GameObject import GameObject
+from Circle import Circle
+from SpriteObject import SpriteObject
+from Player import Player
+from BackgroundStar import BackgroundStar
+from Planet import Planet
+
 class Game():
     def __init__(self):
         self.title:str = "Spacer"
@@ -36,11 +43,12 @@ class Game():
         self.game_objects:list = []
 
         # Create some stars
-        for i in range(0, 200):
+        for i in range(0, 300):
             self.game_objects.append(BackgroundStar(random.randint(0, self.map_width), random.randint(0, self.map_height), 4, self.colours["white"]))
 
-        self.game_objects.append(Planet(100, 1000, 2000, self.colours["blue"]))
-        self.game_objects.append(Planet(2000, 2000, 100, self.colours["grey"]))
+        for i in range(0, 5):
+            self.game_objects.append(Planet(random.randint(0, self.map_width), random.randint(0, self.map_height), random.randint(50, 2000), self.colours["blue"]))
+            self.game_objects.append(Planet(2000, 2000, 50, self.colours["grey"]))
 
         self.player = Player(400, 400, 50, 50)
 
@@ -69,6 +77,10 @@ class Game():
                 camera_top = self.player.y - (self.window_height / 2)
 
             for game_object in self.game_objects:
+                # if ((game_object.x < camera_left + self.window_width)
+                # and (game_object.x + game_object.width > camera_left)
+                # and (game_object.y < camera_top + self.window_height)
+                # and (game_object.y + game_object.height > camera_top)):
                 game_object.draw(self.display, camera_left, camera_top)
 
             self.player.update(self.keyboard)
@@ -100,134 +112,6 @@ class Game():
             self.keyboard["right"] = active
         elif key == pygame.K_LEFT:
             self.keyboard["left"] = active
-
-class GameObject():
-    def __init__(self, x:int, y:int, width:int, height:int):
-        self.x:int = x
-        self.y:int = y
-        self.width:int = width
-        self.height:int = height
-
-    def move(self, dX:int, dY:int):
-        self.x = self.x + dX
-        self.y = self.y + dY
-
-class SpriteObject(GameObject):
-    def __init__(self, x:int, y:int, width:int, height:int, sprite_paths:list):
-        GameObject.__init__(self, x, y, width, height)
-        self.sprites:dict = {}
-
-        for sprite in sprite_paths:
-            print(sprite)
-            self.sprites[sprite] = pygame.transform.scale(pygame.image.load(sprite_paths[sprite]), (width, height))
-        
-        self.orientation:int = 0
-
-    def change_orientation(self, d_degrees):
-        if (self.orientation + d_degrees > 360):
-            self.orientation = (self.orientation + 360) + d_degrees
-        if (self.orientation + d_degrees < 0):
-            self.orientation = (self.orientation - 360) + d_degrees
-        else:
-            self.orientation = self.orientation + d_degrees
-
-    def draw(self, display, camera_left:int, camera_top:int, sprite:str = ""):
-        if sprite == "":
-            sprite = next(iter(self.sprites))
-        rotated_sprite = pygame.transform.rotate(self.sprites[sprite], self.orientation)
-        display.blit(rotated_sprite, (int(self.x - camera_left), int(self.y - camera_top)))
-
-class Player(SpriteObject):
-    def __init__(self, x:int, y:int, width:int, height:int):
-        SpriteObject.__init__(self, x, y, width, height, 
-            {
-                "player": "assets/player.png",
-                "forward": "assets/forward_player.png"
-            }
-        )
-        self.max_forward_velocity:int = 20
-        self.max_backward_velocity:int = 5
-        self.orientation_velocity:float = 0
-        self.max_orientation_velocity:float = 2
-        self.y_velocity:float = 0
-        self.current_sprite:str = "player"
-
-    def update(self, keyboard:dict):
-        if (keyboard["down"] == True) and (self.y_velocity > -(self.max_backward_velocity)):
-            self.y_velocity = self.y_velocity - 0.1
-
-        if (keyboard["up"] == True) and (self.y_velocity < self.max_forward_velocity):
-            self.y_velocity = self.y_velocity + 0.1
-            self.current_sprite = "forward"
-        elif keyboard["up"] == False:
-            self.current_sprite = "player"
-        
-        if keyboard["up"] == True:
-            self.current_sprite = "forward"
-
-        if (keyboard["right"] == True) and (self.orientation_velocity < self.max_orientation_velocity):
-            self.orientation_velocity += 0.05
-
-        if (keyboard["left"] == True) and (self.orientation_velocity > -(self.max_orientation_velocity)):
-            self.orientation_velocity -= 0.05
-        
-        if (self.orientation_velocity > 0) and (self.orientation_velocity < 0.05):
-            self.orientation_velocity = 0
-
-        self.change_orientation(-self.orientation_velocity)
-        self.move_at_orientation()
-
-    def move_at_orientation(self):
-        self.move(-(self.y_velocity*math.cos(math.radians(self.orientation))), (self.y_velocity*math.sin(math.radians(self.orientation))))
-    
-    def draw(self, display, camera_left:int, camera_top:int, sprite:str = ""):
-        super().draw(display, camera_left, camera_top, self.current_sprite)
-
-
-class Circle(GameObject):
-    def __init__(self, x:int, y:int, diameter:int, colour):
-        GameObject.__init__(self, x, y, diameter, diameter)
-        self.colour = colour
-    
-    def draw(self, display, camera_left:int, camera_top:int):
-        pygame.draw.circle(display, self.colour, (int(self.x - camera_left), int(self.y - camera_top)), int(self.height / 2), 0)
-
-class Planet(Circle):
-    def __init__(self, x:int, y:int, diameter:int, colour):
-        Circle.__init__(self, x, y, diameter, colour)
-        
-class BackgroundStar(Circle):
-    def __init__(self, x:int, y:int, diameter:int, colour):
-        Circle.__init__(self, x, y, diameter, colour)
-        self.max_ticks:int = 100
-        self.ticks:int = random.randint(0, self.max_ticks)
-        self.d_luminosity:int = 2
-        self.positive_twinkle:bool = True
-    
-    def draw(self, display, camera_left:int, camera_top:int):
-
-        # This makes the background stars slightly fade in and out
-        # It looks like they are twinkling
-        if self.ticks > self.max_ticks:
-            self.ticks = 0
-            self.positive_twinkle = not self.positive_twinkle
-        else:
-            self.ticks += 1
-
-        colour_list = list(self.colour)
-
-        if self.positive_twinkle and (colour_list[0] < 255):
-            colour_list[0] += self.d_luminosity
-            colour_list[1] += self.d_luminosity
-            colour_list[2] += self.d_luminosity
-        elif colour_list[0] > 1:
-            colour_list[0] -= self.d_luminosity
-            colour_list[1] -= self.d_luminosity
-            colour_list[2] -= self.d_luminosity
-
-        self.colour = tuple(colour_list)
-
-        super().draw(display, camera_left, camera_top)
      
 if __name__=="__main__":
     game = Game()
